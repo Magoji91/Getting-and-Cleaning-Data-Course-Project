@@ -42,7 +42,8 @@ I-) Merges the training and the test sets to create one data set.
       for(i in 1:nrow(tidy_dataset)){
       index<-which(activity_label[,1] == subject_activity[i,1])
       tidy_dataset$Activity[i]<-activity_label[index,2]
-    }    
+    }   
+  
 9.	Read the 561 features readings for each subjects from both the testing and training sets
     test_feature_readings<-read.table("./data/UCI HAR Dataset/test/X_test.txt")
     train_feature_readings<-read.table("./data/UCI HAR Dataset/train/X_train.txt")
