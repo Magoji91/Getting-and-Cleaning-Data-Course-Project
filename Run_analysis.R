@@ -12,100 +12,70 @@ You should create one R script called run_analysis.R that does the following:
   
 I-) Merges the training and the test sets to create one data set.
     PROCEDURE:
-1.	Read the arquive: features.txt    
-    features<-read.table("./data/UCI HAR Dataset/features.txt",stringsAsFactors=F)   
-  
-2.	Read the arquive: activity_labels.txt
-    activity_label<-read.table("./data/UCI HAR Dataset/activity_labels.txt",stringsAsFactors=F)   
-  
-3.	Read the subjects from: the testing and training sets
-    testing_subjects<-read.table("./data/UCI HAR Dataset/test/subject_test.txt")
-    training_subjects<-read.table("./data/UCI HAR Dataset/train/subject_train.txt")
-  
-4.	Add the subjects from the testing set to the new dataset
-    tidy_dataset<-testing_subjects  
-  
-5.	Add the subjects from the training set to the new dataset
-    tidy_dataset<-rbind(tidy_dataset,training_subjects)  
-  
-6.	Replace the column name to Subjects
-    colnames(tidy_dataset)[1]<-"Subjects"  
-  
-7.	Read the activities of the subjects from both the testing and training sets    
-    test_activity<-read.table("./data/UCI HAR Dataset/test/Y_test.txt")
-    train_activity<-read.table("./data/UCI HAR Dataset/train/Y_train.txt")
-    
-    subject_activity<-test_activity 
-    subject_activity<-rbind(subject_activity,train_activity) 
-  
-8.	Replace the activities by their name from the activity_label dataframe
-      for(i in 1:nrow(tidy_dataset)){
-      index<-which(activity_label[,1] == subject_activity[i,1])
-      tidy_dataset$Activity[i]<-activity_label[index,2]
-    }   
-  
-9.	Read the 561 features readings for each subjects from both the testing and training sets
-    test_feature_readings<-read.table("./data/UCI HAR Dataset/test/X_test.txt")
-    train_feature_readings<-read.table("./data/UCI HAR Dataset/train/X_train.txt")
-  
-10.	Add the features readings of testing
-    feature_readings<-test_feature_readings
-  
-11.	Append the features readings of training
-    rbind(feature_readings,train_feature_readings) 
-  
-12.	Replace the names of 561 columns with feature readings in the “tidy_dataset”  with their features names from the features dataframe  
-    for(i in 1:ncol(feature_readings))
-    {
-      tidy_dataset<-cbind(tidy_dataset,feature_readings[,i])
-      names(tidy_dataset)[ncol(tidy_dataset)]<-features[i,2]
-    }     
+1.	DOWNLOAD AND UNZIP the arquive: 
+if(!file.exists("./data")) dir.create("./data")
+fileUrl <- "https://d396qusza40orc.cloudfront.net/getdata%2Fprojectfiles%2FUCI%20HAR%20Dataset.zip"
+download.file(fileUrl, destfile = "./data/projectData_getCleanData.zip")
+listZip <- unzip("./data/projectData_getCleanData.zip", exdir = "./data")
+      
+2.LOAD THE DATA
+train.x <- read.table("./data/UCI HAR Dataset/train/X_train.txt")
+train.y <- read.table("./data/UCI HAR Dataset/train/y_train.txt")
+train.subject <- read.table("./data/UCI HAR Dataset/train/subject_train.txt")
+test.x <- read.table("./data/UCI HAR Dataset/test/X_test.txt")
+test.y <- read.table("./data/UCI HAR Dataset/test/y_test.txt")
+test.subject <- read.table("./data/UCI HAR Dataset/test/subject_test.txt")  
+
+3.CREATE ONE DATA SET
+trainData <- cbind(train.subject, train.y, train.x)
+testData <- cbind(test.subject, test.y, test.x)
+fullData <- rbind(trainData, testData) 
   
 II-) Extracts only the measurements on the mean and standard deviation for each measurement.
-    PROCEDURE:
-1.	Measure the mean and standard deviation of the columns 
-    extract<-grep("(.*)(mean|std)[Freq]?(.*)[/(/)]$|(.*)(mean|std)(.*)()-[X|Y|Z]$",colnames(tidy_dataset),value=T)     
-  
+    PROCEDURE:          
+1.Load feature names
+featureName <- read.table("./data/UCI HAR Dataset/features.txt", stringsAsFactors = FALSE)[,2]
+   
+2. Measure the mean and standard deviation of the columns 
+featureIndex <- grep(("mean\\(\\)|std\\(\\)"), featureName)
+Cleandata <- fullData[, c(1, 2, featureIndex+2)]
+colnames(Cleandata) <- c("subject", "activity", featureName[featureIndex]) 
+    
 III-) Uses descriptive activity names to name the activities in the data set.
     PROCEDURE:
- 1.	Sort the tidy_dataset with the extracted columns
-    tidy_dataset<-tidy_dataset[,c("Subjects","Activity",extract)] 
+1.	Load activities data
+activityName <- read.table("./data/UCI HAR Dataset/activity_labels.txt")
+
+2. Replace 1 to 6 with activity names
+Cleandata$activity <- factor(Cleandata$activity, levels = activityName[,1], labels = activityName[,2])
   
 IV-) Appropriately labels the data set with descriptive variable names.
     PROCEDURE:
 1.	REPLACE THE ACTIVITY LABELS WITH DESCRIPTIVE NAMES:
+names(Cleandata) <- gsub("\\()", "", names(Cleandata))
+names(Cleandata) <- gsub("^t", "time", names(Cleandata))
+names(Cleandata) <- gsub("^f", "frequence", names(Cleandata))
+names(Cleandata) <- gsub("-mean", "Mean", names(Cleandata))
+names(Cleandata) <- gsub("-std", "Std", names(Cleandata))
     
-    tidy_dataset$Activity<-gsub("WALKING_UPSTAIRS","Walking Up",tidy_dataset$Activity)
-    tidy_dataset$Activity<-gsub("WALKING_DOWNSTAIRS","Walking Down",tidy_dataset$Activity)
-    tidy_dataset$Activity<-gsub("WALKING","Walking",tidy_dataset$Activity)
-    tidy_dataset$Activity<-gsub("SITTING","Sitting",tidy_dataset$Activity)
-    tidy_dataset$Activity<-gsub("STANDING","Standing",tidy_dataset$Activity)
-    tidy_dataset$Activity<-gsub("LAYING","Laying",tidy_dataset$Activity)
-  
-2.	REPLACE THE COLUMN NAMES WITH DESCRIPTIVE NAMES: 
-A.	Strip the parenthesis from the column names
-    colnames(tidy_dataset)<-gsub("[/(/)]","",colnames(tidy_dataset))
-    
-B.	Strip the hyphens from the column names and replacing it with underscores
-    colnames(tidy_dataset)<-gsub("-","_",colnames(tidy_dataset))
-
 V-) From the data set in step 4, creates a second, independent tidy data set with the average of each variable for each activity and each subject.
     PROCEDURE:
-1.	Check if the data.table package is installed 
+1.	Check if the dplyr package is installed 
 2.	Download if not 
 3.	Load the package
    
-    if(!("data.table" %in% rownames(installed.packages()))){
+    if(!("dplyr" %in% rownames(installed.packages()))){
       
-      install.packages("data.table")
+      install.packages("dplyr")
       library(data.table)
       
     }else{
       
-      library(data.table)
+      library(dplyr)
     }
     
-4.	Convert the data frame to data table
-    tidy_dataset = data.table(tidy_dataset)   
-5. Separate data by subject and activity of each of the subjects to allow the implementation of future calculations
-    write.csv(tidy_dataset,"Tidy_Data.csv",row.names=F)
+groupData <- Cleandata %>%
+        group_by(subject, activity) %>%
+        summarise_each(funs(mean))
+
+write.table(groupData, "./Getting_and_Cleaning_data_Project/MeanData.txt", row.names = FALSE)
